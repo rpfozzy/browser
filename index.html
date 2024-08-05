@@ -266,167 +266,147 @@
             return 'vibrate' in navigator;
         }
 
-        async function getGeolocationSupport() {
-            return 'geolocation' in navigator;
+        async function ping(url) {
+            const startTime = performance.now();
+            try {
+                await fetch(url);
+            } catch (e) {
+                console.error('Ping failed:', e);
+            }
+            const endTime = performance.now();
+            return (endTime - startTime).toFixed(2) + ' ms';
         }
 
-        async function getSpeechRecognitionSupport() {
-            return 'SpeechRecognitionSupport' in window || 'webkitSpeechRecognition' in window;
+        async function getDownloadSpeed() {
+            const startTime = new Date().getTime();
+            const image = new Image();
+            const imageSize = 4995374; // Размер изображения в байтах (примерно 5MB)
+
+            return new Promise((resolve, reject) => {
+                image.onload = () => {
+                    const endTime = new Date().getTime();
+                    const duration = (endTime - startTime) / 1000;
+                    const speedMbps = ((imageSize * 8) / (1024 * 1024) / duration).toFixed(2);
+                    resolve(speedMbps + ' Mbps');
+                };
+
+                image.onerror = () => {
+                    reject('Не удалось измерить скорость загрузки');
+                };
+
+                image.src = 'https://speed.hetzner.de/5MB.bin?' + startTime;
+            });
         }
 
-        async function getNFCsupport() {
-            return 'NFC' in navigator;
-        }
+        async function getUploadSpeed() {
+            const startTime = new Date().getTime();
+            const xhr = new XMLHttpRequest();
+            const data = new Uint8Array(20 * 1024 * 1024); // 20MB
 
-        async function getUSBsupport() {
-            return 'usb' in navigator;
-        }
+            return new Promise((resolve, reject) => {
+                xhr.open('POST', 'https://www.example.com/upload', true);
+                xhr.onreadystatechange = () => {
+                    if (xhr.readyState === 4) {
+                        const endTime = new Date().getTime();
+                        const duration = (endTime - startTime) / 1000;
+                        const speedMbps = ((data.length * 8) / (1024 * 1024) / duration).toFixed(2);
+                        resolve(speedMbps + ' Mbps');
+                    }
+                };
 
-        async function getSerialSupport() {
-            return 'serial' in navigator;
-        }
+                xhr.onerror = () => {
+                    reject('Не удалось измерить скорость отдачи');
+                };
 
-        async function getMediaCapabilities() {
-            return 'mediaCapabilities' in navigator;
-        }
-
-        async function getWebShareSupport() {
-            return 'canShare' in navigator;
-        }
-
-        async function getGyroscopeSupport() {
-            return 'Gyroscope' in window;
-        }
-
-        async function getAmbientLightSensorSupport() {
-            return 'AmbientLightSensor' in window;
-        }
-
-        async function getDeviceMemory() {
-            return navigator.deviceMemory || 'Неизвестно';
-        }
-
-        async function getHardwareConcurrency() {
-            return navigator.hardwareConcurrency || 'Неизвестно';
+                xhr.send(data);
+            });
         }
 
         async function getCompleteInfo() {
-            resultsDiv.innerHTML = '';
-            
-            const ipResponse = await fetch('https://api.ipify.org?format=json');
-            const ipData = await ipResponse.json();
-            const ipAddress = ipData.ip;
-
             const deviceInfo = await getDeviceInfo();
-            const deviceBrandAndModel = await getDeviceBrandAndModel();
-            const ispData = await fetchData();
+            const brandModel = await getDeviceBrandAndModel();
             const internetSpeed = await checkInternetSpeed();
-            
-            const additionalInfo = {
-                userAgent: await getUserAgent(),
-                platform: await getPlatform(),
-                cookiesEnabled: await getCookiesEnabled(),
-                javaEnabled: await getJavaEnabled(),
-                doNotTrackStatus: await getDoNotTrackStatus(),
-                connectionType: await getConnectionType(),
-                colorDepth: await getColorDepth(),
-                devicePixelRatio: await getDevicePixelRatio(),
-                bluetoothAvailability: await getBluetoothAvailability(),
-                mediaDevices: await getMediaDevices(),
-                batteryChargingTime: await getBatteryChargingTime(),
-                batteryDischargingTime: await getBatteryDischargingTime(),
-                deviceType: await getDeviceType(),
-                networkType: await getNetworkType(),
-                audioDevices: await getAudioDevices(),
-                videoDevices: await getVideoDevices(),
-                keyboardLayout: await getKeyboardLayout(),
-                touchSupport: await getTouchSupport(),
-                pointerSupport: await getPointerSupport(),
-                languagePreference: await getLanguagePreference(),
-                hardwareCapabilities: await getHardwareCapabilities(),
-                serviceWorkerSupport: await getServiceWorkerSupport(),
-                notificationSupport: await getNotificationSupport(),
-                vibrationSupport: await getVibrationSupport(),
-                geolocationSupport: await getGeolocationSupport(),
-                speechRecognitionSupport: await getSpeechRecognitionSupport(),
-                nfcSupport: await getNFCsupport(),
-                usbSupport: await getUSBsupport(),
-                serialSupport: await getSerialSupport(),
-                mediaCapabilities: await getMediaCapabilities(),
-                webShareSupport: await getWebShareSupport(),
-                gyroscopeSupport: await getGyroscopeSupport(),
-                ambientLightSensorSupport: await getAmbientLightSensorSupport(),
-                deviceMemory: await getDeviceMemory(),
-                hardwareConcurrency: await getHardwareConcurrency()
-            };
+            const ispData = await fetchData();
+            const userAgent = await getUserAgent();
+            const platform = await getPlatform();
+            const cookiesEnabled = await getCookiesEnabled();
+            const javaEnabled = await getJavaEnabled();
+            const doNotTrackStatus = await getDoNotTrackStatus();
+            const connectionType = await getConnectionType();
+            const colorDepth = await getColorDepth();
+            const devicePixelRatio = await getDevicePixelRatio();
+            const bluetoothAvailability = await getBluetoothAvailability();
+            const mediaDevices = await getMediaDevices();
+            const batteryChargingTime = await getBatteryChargingTime();
+            const batteryDischargingTime = await getBatteryDischargingTime();
+            const deviceType = await getDeviceType();
+            const networkType = await getNetworkType();
+            const audioDevices = await getAudioDevices();
+            const videoDevices = await getVideoDevices();
+            const keyboardLayout = await getKeyboardLayout();
+            const touchSupport = await getTouchSupport();
+            const pointerSupport = await getPointerSupport();
+            const languagePreference = await getLanguagePreference();
+            const hardwareCapabilities = await getHardwareCapabilities();
+            const serviceWorkerSupport = await getServiceWorkerSupport();
+            const notificationSupport = await getNotificationSupport();
+            const vibrationSupport = await getVibrationSupport();
+            const pingResult = await ping('https://www.google.com');
+            const downloadSpeed = await getDownloadSpeed();
+            const uploadSpeed = await getUploadSpeed();
 
-            let message = `
-                IP-адрес пользователя: ${ipAddress}<br>
-                Устройство: ${deviceInfo.device}<br>
-                Марка устройства: ${deviceBrandAndModel.brand}<br>
-                Модель устройства: ${deviceBrandAndModel.model}<br>
-                Браузер: ${deviceInfo.browser}<br>
-                Разрешение экрана: ${deviceInfo.screenResolution}<br>
-                Язык: ${deviceInfo.language}<br>
-                Платформа: ${deviceInfo.platform}<br>
-                Время работы системы: ${deviceInfo.uptime} сек.<br>
-                Провайдер: ${ispData.isp}<br>
-                Имя провайдера: ${ispData.org}<br>
-                Номер AS провайдера: ${ispData.as}<br>
-                Поддержка WebGL: ${deviceInfo.webglSupport}<br>
-                Установленные шрифты: ${deviceInfo.fonts}<br>
-                Время рендеринга страницы: ${deviceInfo.renderTime} мс<br>
-                Уровень заряда батареи: ${deviceInfo.batteryLevel}<br>
-                Таймзона пользователя: ${deviceInfo.timeZone}<br>
-                Аппаратные потоки: ${deviceInfo.hardwareConcurrency}<br>
-                Количество касаний: ${deviceInfo.maxTouchPoints}<br>
-                Скорость интернета: ${internetSpeed} Mbps<br>
-                Память устройства: ${deviceInfo.deviceMemory} GB<br>
-                Статус подключения к сети: ${deviceInfo.onlineStatus}<br>
-                User-Agent: ${additionalInfo.userAgent}<br>
-                Платформа (дублировано): ${additionalInfo.platform}<br>
-                Поддержка Cookies: ${additionalInfo.cookiesEnabled}<br>
-                Поддержка Java: ${additionalInfo.javaEnabled}<br>
-                Do Not Track: ${additionalInfo.doNotTrackStatus}<br>
-                Тип подключения: ${additionalInfo.connectionType}<br>
-                Глубина цвета: ${additionalInfo.colorDepth}<br>
-                Коэффициент масштабирования устройства: ${additionalInfo.devicePixelRatio}<br>
-                Поддержка Bluetooth: ${additionalInfo.bluetoothAvailability}<br>
-                Устройства медиа: ${additionalInfo.mediaDevices}<br>
-                Время зарядки батареи: ${additionalInfo.batteryChargingTime}<br>
-                Время разрядки батареи: ${additionalInfo.batteryDischargingTime}<br>
-                Тип устройства: ${additionalInfo.deviceType}<br>
-                Тип сети: ${additionalInfo.networkType}<br>
-                Аудио устройства: ${additionalInfo.audioDevices}<br>
-                Видео устройства: ${additionalInfo.videoDevices}<br>
-                Раскладка клавиатуры: ${additionalInfo.keyboardLayout}<br>
-                Поддержка касаний: ${additionalInfo.touchSupport}<br>
-                Поддержка указателей: ${additionalInfo.pointerSupport}<br>
-                Языковые предпочтения: ${additionalInfo.languagePreference}<br>
-                Аппаратные возможности: ${JSON.stringify(additionalInfo.hardwareCapabilities)}<br>
-                Поддержка Service Worker: ${additionalInfo.serviceWorkerSupport}<br>
-                Поддержка уведомлений: ${additionalInfo.notificationSupport}<br>
-                Поддержка вибрации: ${additionalInfo.vibrationSupport}<br>
-                Поддержка геолокации: ${additionalInfo.geolocationSupport}<br>
-                Поддержка распознавания речи: ${additionalInfo.speechRecognitionSupport}<br>
-                Поддержка NFC: ${additionalInfo.nfcSupport}<br>
-                Поддержка USB: ${additionalInfo.usbSupport}<br>
-                Поддержка Serial: ${additionalInfo.serialSupport}<br>
-                Медиа возможности: ${additionalInfo.mediaCapabilities}<br>
-                Поддержка Web Share: ${additionalInfo.webShareSupport}<br>
-                Поддержка гироскопа: ${additionalInfo.gyroscopeSupport}<br>
-                Поддержка датчика освещенности: ${additionalInfo.ambientLightSensorSupport}<br>
-                Память устройства: ${additionalInfo.deviceMemory} GB<br>
-                Аппаратные потоки: ${additionalInfo.hardwareConcurrency}<br>
+            resultsDiv.innerHTML = `
+                <h2>Информация о вашем устройстве:</h2>
+                <p>Бренд: ${brandModel.brand}</p>
+                <p>Модель: ${brandModel.model}</p>
+                <p>Разрешение экрана: ${deviceInfo.screenResolution}</p>
+                <p>Язык: ${deviceInfo.language}</p>
+                <p>Платформа: ${deviceInfo.platform}</p>
+                <p>Время работы: ${deviceInfo.uptime} сек</p>
+                <p>Поддержка WebGL: ${deviceInfo.webglSupport}</p>
+                <p>Доступные шрифты: ${deviceInfo.fonts}</p>
+                <p>Время рендеринга: ${deviceInfo.renderTime} мс</p>
+                <p>Часовой пояс: ${deviceInfo.timeZone}</p>
+                <p>Число потоков: ${deviceInfo.hardwareConcurrency}</p>
+                <p>Максимальное число касаний: ${deviceInfo.maxTouchPoints}</p>
+                <p>Память устройства: ${deviceInfo.deviceMemory} GB</p>
+                <p>Статус соединения: ${deviceInfo.onlineStatus}</p>
+                <p>Устройство: ${deviceInfo.device}</p>
+                <p>Браузер: ${deviceInfo.browser}</p>
+                <p>Уровень заряда батареи: ${deviceInfo.batteryLevel}</p>
+                <p>Зарядка: ${deviceInfo.charging}</p>
+                <p>Скорость интернета: ${internetSpeed} Mbps</p>
+                <p>Провайдер: ${ispData.isp}</p>
+                <p>Организация: ${ispData.org}</p>
+                <p>AS: ${ispData.as}</p>
+                <p>User-Agent: ${userAgent}</p>
+                <p>Платформа: ${platform}</p>
+                <p>Включены ли куки: ${cookiesEnabled}</p>
+                <p>Включена ли Java: ${javaEnabled}</p>
+                <p>Статус Do Not Track: ${doNotTrackStatus}</p>
+                <p>Тип соединения: ${connectionType}</p>
+                <p>Глубина цвета: ${colorDepth}</p>
+                <p>Коэффициент масштабирования устройства: ${devicePixelRatio}</p>
+                <p>Поддержка Bluetooth: ${bluetoothAvailability}</p>
+                <p>Устройства мультимедиа: ${mediaDevices}</p>
+                <p>Время зарядки батареи: ${batteryChargingTime}</p>
+                <p>Время разрядки батареи: ${batteryDischargingTime}</p>
+                <p>Тип устройства: ${deviceType}</p>
+                <p>Тип сети: ${networkType}</p>
+                <p>Аудиоустройства: ${audioDevices}</p>
+                <p>Видеоустройства: ${videoDevices}</p>
+                <p>Раскладка клавиатуры: ${keyboardLayout}</p>
+                <p>Поддержка сенсорного ввода: ${touchSupport}</p>
+                <p>Поддержка указателя: ${pointerSupport}</p>
+                <p>Языковые предпочтения: ${languagePreference}</p>
+                <p>Аппаратные возможности: ${JSON.stringify(hardwareCapabilities)}</p>
+                <p>Поддержка Service Worker: ${serviceWorkerSupport}</p>
+                <p>Поддержка уведомлений: ${notificationSupport}</p>
+                <p>Поддержка вибрации: ${vibrationSupport}</p>
+                <p>Ping: ${pingResult}</p>
+                <p>Скорость загрузки: ${downloadSpeed}</p>
+                <p>Скорость отдачи: ${uploadSpeed}</p>
             `;
-
-            if (deviceInfo.charging) {
-                message += "<strong>Этот пользователь заряжает устройство, возможно находится дома.</strong><br>";
-            } else {
-                message += "<strong>Пользователь не заряжает устройство, возможно находится не дома.</strong><br>";
-            }
-
-            resultsDiv.innerHTML = message;
         }
     </script>
 </body>
