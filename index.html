@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Приватный браузер</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        input[type="submit"] {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        iframe {
+            width: 100%;
+            height: 80vh;
+            border: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Приватный браузер</h1>
+    <p>Введите URL для посещения:</p>
+    <form id="proxyForm">
+        <input type="text" id="urlInput" placeholder="Введите URL..." required>
+        <input type="submit" value="Перейти">
+    </form>
+    <iframe id="proxyFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+
+    <script>
+        document.getElementById('proxyForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const url = document.getElementById('urlInput').value;
+            document.getElementById('proxyFrame').src = '/proxy?url=' + encodeURIComponent(url);
+        });
+    </script>
+</body>
+</html>
