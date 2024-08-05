@@ -3,48 +3,431 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Приватный браузер</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-        input[type="submit"] {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        iframe {
-            width: 100%;
-            height: 80vh;
-            border: none;
-            margin-top: 20px;
-        }
-    </style>
+    <title>Информация об устройстве и анализ поведения</title>
 </head>
 <body>
-    <h1>Приватный браузер</h1>
-    <p>Введите URL для посещения:</p>
-    <form id="proxyForm">
-        <input type="text" id="urlInput" placeholder="Введите URL..." required>
-        <input type="submit" value="Перейти">
-    </form>
-    <iframe id="proxyFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+    <h1>Добро пожаловать на страницу информации об устройстве и анализ поведения</h1>
+    <p>Нажмите на кнопку ниже, чтобы получить информацию о вашем устройстве:</p>
+
+    <button onclick="getCompleteInfo()">Получить информацию</button>
+
+    <div id="results"></div>
 
     <script>
-        document.getElementById('proxyForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const url = document.getElementById('urlInput').value;
-            document.getElementById('proxyFrame').src = '/proxy?url=' + encodeURIComponent(url);
-        });
+        const resultsDiv = document.getElementById('results');
+
+        async function getDeviceBrandAndModel() {
+            const userAgent = navigator.userAgent;
+            let deviceBrand = 'Unknown';
+            let deviceModel = 'Unknown';
+
+            if (/android/i.test(userAgent)) {
+                deviceBrand = 'Android';
+                const match = userAgent.match(/;\s(.*?)(?:\sBuild|\))/);
+                if (match) {
+                    deviceModel = match[1];
+                }
+            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                deviceBrand = 'Apple';
+                const match = userAgent.match(/\(([a-zA-Z]+);.*?OS\s([0-9_]+)/);
+                if (match) {
+                    deviceModel = match[1];
+                }
+            }
+
+            return { brand: deviceBrand, model: deviceModel };
+        }
+
+        async function getDeviceInfo() {
+            const userAgent = navigator.userAgent;
+            const deviceInfo = {
+                screenResolution: `${window.screen.width}x${window.screen.height}`,
+                language: navigator.language,
+                platform: navigator.platform,
+                uptime: Math.round(performance.now() / 1000),
+                webglSupport: supportsWebGL(),
+                fonts: await getFonts(),
+                renderTime: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart,
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                hardwareConcurrency: navigator.hardwareConcurrency || 'Unknown',
+                maxTouchPoints: navigator.maxTouchPoints || 'Not supported',
+                deviceMemory: navigator.deviceMemory || 'Unknown',
+                onlineStatus: navigator.onLine ? 'Online' : 'Offline'
+            };
+
+            if (/android/i.test(userAgent)) {
+                deviceInfo.device = 'Android';
+            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                deviceInfo.device = 'iOS';
+            } else {
+                deviceInfo.device = 'Unknown';
+            }
+
+            if (/chrome|crios|crmo/i.test(userAgent)) {
+                deviceInfo.browser = 'Chrome';
+            } else if (/firefox|iceweasel|fxios/i.test(userAgent)) {
+                deviceInfo.browser = 'Firefox';
+            } else if (/safari/i.test(userAgent)) {
+                deviceInfo.browser = 'Safari';
+            } else if (/msie|trident/i.test(userAgent)) {
+                deviceInfo.browser = 'Internet Explorer';
+            } else {
+                deviceInfo.browser = 'Unknown';
+            }
+
+            if (navigator.getBattery) {
+                const battery = await navigator.getBattery();
+                deviceInfo.batteryLevel = battery.level * 100 + '%';
+                deviceInfo.charging = battery.charging;
+            } else {
+                deviceInfo.batteryLevel = 'Not supported';
+                deviceInfo.charging = 'Unknown';
+            }
+
+            return deviceInfo;
+        }
+
+        function supportsWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                return !!window.WebGLRenderingContext && !!canvas.getContext('webgl');
+            } catch (e) {
+                return false;
+            }
+        }
+
+        async function getFonts() {
+            const fontList = ['Arial', 'Verdana', 'Times New Roman', 'Courier New', 'Courier', 'Georgia', 'Palatino', 'Garamond', 'Bookman', 'Comic Sans MS', 'Trebuchet MS', 'Arial Black', 'Impact'];
+            const availableFonts = [];
+            for (const font of fontList) {
+                if (document.fonts.check(`12px "${font}"`)) {
+                    availableFonts.push(font);
+                }
+            }
+            return availableFonts.join(', ');
+        }
+
+        function checkInternetSpeed() {
+            return new Promise((resolve, reject) => {
+                const image = new Image();
+                const startTime = new Date().getTime();
+
+                image.onload = function() {
+                    const endTime = new Date().getTime();
+                    const duration = (endTime - startTime) / 1000;
+                    const bitsLoaded = 1024 * 1024 * 8; // Размер изображения в битах
+                    const speedMbps = (bitsLoaded / duration / (1024 * 1024)).toFixed(2);
+                    resolve(speedMbps);
+                };
+
+                image.onerror = function() {
+                    reject('Не удалось измерить скорость интернета');
+                };
+
+                image.src = "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png?" + startTime;
+            });
+        }
+
+        async function fetchData() {
+            try {
+                const response = await fetch('http://ip-api.com/json/');
+                const data = await response.json();
+
+                return {
+                    isp: data.isp || 'Неизвестно',
+                    org: data.org || 'Неизвестно',
+                    as: data.as || 'Неизвестно'
+                };
+            } catch (error) {
+                console.error('Ошибка получения данных:', error);
+                return {
+                    isp: 'Неизвестно',
+                    org: 'Неизвестно',
+                    as: 'Неизвестно'
+                };
+            }
+        }
+
+        // Дополнительные функции:
+        async function getUserAgent() {
+            return navigator.userAgent;
+        }
+
+        async function getPlatform() {
+            return navigator.platform;
+        }
+
+        async function getCookiesEnabled() {
+            return navigator.cookieEnabled ? "Enabled" : "Disabled";
+        }
+
+        async function getJavaEnabled() {
+            return navigator.javaEnabled() ? "Enabled" : "Disabled";
+        }
+
+        async function getDoNotTrackStatus() {
+            return navigator.doNotTrack === "1" ? "Enabled" : "Disabled";
+        }
+
+        async function getConnectionType() {
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            return connection ? connection.effectiveType : "Unknown";
+        }
+
+        async function getColorDepth() {
+            return `${screen.colorDepth}-bit`;
+        }
+
+        async function getDevicePixelRatio() {
+            return window.devicePixelRatio;
+        }
+
+        async function getBluetoothAvailability() {
+            return navigator.bluetooth ? "Supported" : "Not Supported";
+        }
+
+        async function getMediaDevices() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            return devices.map(device => `${device.kind}: ${device.label}`).join(', ');
+        }
+
+        async function getBatteryChargingTime() {
+            if (navigator.getBattery) {
+                const battery = await navigator.getBattery();
+                return battery.chargingTime ? `${battery.chargingTime} сек.` : 'Неизвестно';
+            }
+            return 'Не поддерживается';
+        }
+
+        async function getBatteryDischargingTime() {
+            if (navigator.getBattery) {
+                const battery = await navigator.getBattery();
+                return battery.dischargingTime ? `${battery.dischargingTime} сек.` : 'Неизвестно';
+            }
+            return 'Не поддерживается';
+        }
+
+        async function getDeviceType() {
+            const ua = navigator.userAgent;
+            if (/mobile/i.test(ua)) return 'Mobile';
+            if (/tablet/i.test(ua)) return 'Tablet';
+            if (/iPad|iPhone|iPod/.test(ua)) return 'iOS Device';
+            if (/Android/.test(ua)) return 'Android Device';
+            return 'Desktop';
+        }
+
+        async function getNetworkType() {
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            return connection ? connection.type : 'Неизвестно';
+        }
+
+        async function getAudioDevices() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            return devices.filter(device => device.kind === 'audioinput').map(device => device.label).join(', ');
+        }
+
+        async function getVideoDevices() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            return devices.filter(device => device.kind === 'videoinput').map(device => device.label).join(', ');
+        }
+
+        async function getKeyboardLayout() {
+            return navigator.keyboard ? await navigator.keyboard.getLayoutMap() : 'Не поддерживается';
+        }
+
+        async function getTouchSupport() {
+            return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+        }
+
+        async function getPointerSupport() {
+            return 'onpointerdown' in window;
+        }
+
+        async function getLanguagePreference() {
+            return navigator.languages.join(', ');
+        }
+
+        async function getHardwareCapabilities() {
+            return {
+                hardwareConcurrency: navigator.hardwareConcurrency || 'Неизвестно',
+                deviceMemory: navigator.deviceMemory || 'Неизвестно'
+            };
+        }
+
+        async function getServiceWorkerSupport() {
+            return 'serviceWorker' in navigator;
+        }
+
+        async function getNotificationSupport() {
+            return 'Notification' in window;
+        }
+
+        async function getVibrationSupport() {
+            return 'vibrate' in navigator;
+        }
+
+        async function getGeolocationSupport() {
+            return 'geolocation' in navigator;
+        }
+
+        async function getSpeechRecognitionSupport() {
+            return 'SpeechRecognitionSupport' in window || 'webkitSpeechRecognition' in window;
+        }
+
+        async function getNFCsupport() {
+            return 'NFC' in navigator;
+        }
+
+        async function getUSBsupport() {
+            return 'usb' in navigator;
+        }
+
+        async function getSerialSupport() {
+            return 'serial' in navigator;
+        }
+
+        async function getMediaCapabilities() {
+            return 'mediaCapabilities' in navigator;
+        }
+
+        async function getWebShareSupport() {
+            return 'canShare' in navigator;
+        }
+
+        async function getGyroscopeSupport() {
+            return 'Gyroscope' in window;
+        }
+
+        async function getAmbientLightSensorSupport() {
+            return 'AmbientLightSensor' in window;
+        }
+
+        async function getDeviceMemory() {
+            return navigator.deviceMemory || 'Неизвестно';
+        }
+
+        async function getHardwareConcurrency() {
+            return navigator.hardwareConcurrency || 'Неизвестно';
+        }
+
+        async function getCompleteInfo() {
+            resultsDiv.innerHTML = '';
+            
+            const ipResponse = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipResponse.json();
+            const ipAddress = ipData.ip;
+
+            const deviceInfo = await getDeviceInfo();
+            const deviceBrandAndModel = await getDeviceBrandAndModel();
+            const ispData = await fetchData();
+            const internetSpeed = await checkInternetSpeed();
+            
+            const additionalInfo = {
+                userAgent: await getUserAgent(),
+                platform: await getPlatform(),
+                cookiesEnabled: await getCookiesEnabled(),
+                javaEnabled: await getJavaEnabled(),
+                doNotTrackStatus: await getDoNotTrackStatus(),
+                connectionType: await getConnectionType(),
+                colorDepth: await getColorDepth(),
+                devicePixelRatio: await getDevicePixelRatio(),
+                bluetoothAvailability: await getBluetoothAvailability(),
+                mediaDevices: await getMediaDevices(),
+                batteryChargingTime: await getBatteryChargingTime(),
+                batteryDischargingTime: await getBatteryDischargingTime(),
+                deviceType: await getDeviceType(),
+                networkType: await getNetworkType(),
+                audioDevices: await getAudioDevices(),
+                videoDevices: await getVideoDevices(),
+                keyboardLayout: await getKeyboardLayout(),
+                touchSupport: await getTouchSupport(),
+                pointerSupport: await getPointerSupport(),
+                languagePreference: await getLanguagePreference(),
+                hardwareCapabilities: await getHardwareCapabilities(),
+                serviceWorkerSupport: await getServiceWorkerSupport(),
+                notificationSupport: await getNotificationSupport(),
+                vibrationSupport: await getVibrationSupport(),
+                geolocationSupport: await getGeolocationSupport(),
+                speechRecognitionSupport: await getSpeechRecognitionSupport(),
+                nfcSupport: await getNFCsupport(),
+                usbSupport: await getUSBsupport(),
+                serialSupport: await getSerialSupport(),
+                mediaCapabilities: await getMediaCapabilities(),
+                webShareSupport: await getWebShareSupport(),
+                gyroscopeSupport: await getGyroscopeSupport(),
+                ambientLightSensorSupport: await getAmbientLightSensorSupport(),
+                deviceMemory: await getDeviceMemory(),
+                hardwareConcurrency: await getHardwareConcurrency()
+            };
+
+            let message = `
+                IP-адрес пользователя: ${ipAddress}<br>
+                Устройство: ${deviceInfo.device}<br>
+                Марка устройства: ${deviceBrandAndModel.brand}<br>
+                Модель устройства: ${deviceBrandAndModel.model}<br>
+                Браузер: ${deviceInfo.browser}<br>
+                Разрешение экрана: ${deviceInfo.screenResolution}<br>
+                Язык: ${deviceInfo.language}<br>
+                Платформа: ${deviceInfo.platform}<br>
+                Время работы системы: ${deviceInfo.uptime} сек.<br>
+                Провайдер: ${ispData.isp}<br>
+                Имя провайдера: ${ispData.org}<br>
+                Номер AS провайдера: ${ispData.as}<br>
+                Поддержка WebGL: ${deviceInfo.webglSupport}<br>
+                Установленные шрифты: ${deviceInfo.fonts}<br>
+                Время рендеринга страницы: ${deviceInfo.renderTime} мс<br>
+                Уровень заряда батареи: ${deviceInfo.batteryLevel}<br>
+                Таймзона пользователя: ${deviceInfo.timeZone}<br>
+                Аппаратные потоки: ${deviceInfo.hardwareConcurrency}<br>
+                Количество касаний: ${deviceInfo.maxTouchPoints}<br>
+                Скорость интернета: ${internetSpeed} Mbps<br>
+                Память устройства: ${deviceInfo.deviceMemory} GB<br>
+                Статус подключения к сети: ${deviceInfo.onlineStatus}<br>
+                User-Agent: ${additionalInfo.userAgent}<br>
+                Платформа (дублировано): ${additionalInfo.platform}<br>
+                Поддержка Cookies: ${additionalInfo.cookiesEnabled}<br>
+                Поддержка Java: ${additionalInfo.javaEnabled}<br>
+                Do Not Track: ${additionalInfo.doNotTrackStatus}<br>
+                Тип подключения: ${additionalInfo.connectionType}<br>
+                Глубина цвета: ${additionalInfo.colorDepth}<br>
+                Коэффициент масштабирования устройства: ${additionalInfo.devicePixelRatio}<br>
+                Поддержка Bluetooth: ${additionalInfo.bluetoothAvailability}<br>
+                Устройства медиа: ${additionalInfo.mediaDevices}<br>
+                Время зарядки батареи: ${additionalInfo.batteryChargingTime}<br>
+                Время разрядки батареи: ${additionalInfo.batteryDischargingTime}<br>
+                Тип устройства: ${additionalInfo.deviceType}<br>
+                Тип сети: ${additionalInfo.networkType}<br>
+                Аудио устройства: ${additionalInfo.audioDevices}<br>
+                Видео устройства: ${additionalInfo.videoDevices}<br>
+                Раскладка клавиатуры: ${additionalInfo.keyboardLayout}<br>
+                Поддержка касаний: ${additionalInfo.touchSupport}<br>
+                Поддержка указателей: ${additionalInfo.pointerSupport}<br>
+                Языковые предпочтения: ${additionalInfo.languagePreference}<br>
+                Аппаратные возможности: ${JSON.stringify(additionalInfo.hardwareCapabilities)}<br>
+                Поддержка Service Worker: ${additionalInfo.serviceWorkerSupport}<br>
+                Поддержка уведомлений: ${additionalInfo.notificationSupport}<br>
+                Поддержка вибрации: ${additionalInfo.vibrationSupport}<br>
+                Поддержка геолокации: ${additionalInfo.geolocationSupport}<br>
+                Поддержка распознавания речи: ${additionalInfo.speechRecognitionSupport}<br>
+                Поддержка NFC: ${additionalInfo.nfcSupport}<br>
+                Поддержка USB: ${additionalInfo.usbSupport}<br>
+                Поддержка Serial: ${additionalInfo.serialSupport}<br>
+                Медиа возможности: ${additionalInfo.mediaCapabilities}<br>
+                Поддержка Web Share: ${additionalInfo.webShareSupport}<br>
+                Поддержка гироскопа: ${additionalInfo.gyroscopeSupport}<br>
+                Поддержка датчика освещенности: ${additionalInfo.ambientLightSensorSupport}<br>
+                Память устройства: ${additionalInfo.deviceMemory} GB<br>
+                Аппаратные потоки: ${additionalInfo.hardwareConcurrency}<br>
+            `;
+
+            if (deviceInfo.charging) {
+                message += "<strong>Этот пользователь заряжает устройство, возможно находится дома.</strong><br>";
+            } else {
+                message += "<strong>Пользователь не заряжает устройство, возможно находится не дома.</strong><br>";
+            }
+
+            resultsDiv.innerHTML = message;
+        }
     </script>
 </body>
 </html>
